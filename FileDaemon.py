@@ -6,18 +6,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import json
 
-# document file supported extensions
-document_extensions = [".doc", ".docx", ".odt", ".rtf", ".txt", ".xls", ".xlsx", ".ods", ".csv", ".ppt", ".pptx", ".odp", ".pdf", ".epub", ".md", ".tex", ".pages"]
-
-# image file supported extensions 
-image_extensions = [".jpeg", ".jpg", ".jfif", ".pjpeg", ".pjp", ".gif", ".png", ".svg", ".bmp", ".tiff", ".tif", ".webp", ".ico"]
-
-# sound file supported extensions
-sound_extensions = [".mp3", ".aac", ".ogg", ".wma", ".m4a", ".wav", ".aiff", ".flac"]
-
-# video file supported extensions
-video_extensions = [".mp4", ".mkv", ".mov", ".avi", ".wmv", ".flv", ".webm", ".mpeg", ".3gp", ".m4v"]
-
 class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEventHandler 
     def __init__(self, src_dir, dst_dir):
         self.user_source_directories = src_dir
@@ -44,7 +32,7 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
                 ".tiff", ".tif", ".webp", ".ico"
             },
 
-            "sounds": {
+            "audios": {
                 ".mp3", ".aac", ".ogg", ".wma",
                 ".m4a", ".wav", ".aiff", ".flac"
             },
@@ -70,8 +58,12 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
                     self.check_type_and_sort(file_name)  
 
     def on_created(self, event):
-        if event.src_path.endswith(".crdownload") or os.path.basename(event.src_path).startswith(".com.google.Chrome."): # incomplete chrome downloads skip
+        if event.is_directory:
             return
+
+        file_name = os.path.basename(event.src_path)
+
+
         
         with os.scandir(self.user_source_directories) as folder:
             for file in folder:
@@ -82,6 +74,7 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
 
     def check_type_and_sort(self, file_name): 
         _, ext = os.path.splitext(file_name)
+        ext = ext.lower()
 
         if ext in self.FILE_TYPES["documents"]:
             self.move_file(file_name, self.destinations["Documents"])
@@ -161,38 +154,68 @@ if __name__ == "__main__": # ensures that the script will only exectue when dire
     src = ""
     dst = ""
 
-    with open("configs.json", "r") as file:
-        configs = json.load(file)
+    try:
+        with open("configs.json", "r") as file:
+            configs = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        configs = {}
 
     if not configs:
         print("Saved Settings Not Found.")
+        src = get_src_dir()
+        dst = get_dest_dir()
+        configs['source_dir'] = src
+        configs['destination_dir'] = dst
+
+        with open("configs.json", "w") as file:
+            json.dump(configs, file, indent=4)
+        
     else:
         print("Saved Settings Found.")
         print(f"Source Folder To Clean: {configs['source_dir']}")
         print(f"Destination Folder: {configs['destination_dir']}")
-        print(f"Would You Like To Use These Settings? [Y/N]")
 
-        answer = input().lower
-        newSettings = []
+        while True:
+            answer = input(f"Would You Like To Use These Settings? [Y/N]").lower()
 
-        if answer == "y":
-            newSettings = set_settings()
-            src = get_src_dir()
-            dst = get_dest_dir()
-            configs['source_dir'] = get_src_dir()
-            configs['destination_dir'] = get_dest_dir()
-        elif answer != "n":
-            print(f"ERROR: INVALID INPUT: {answer}")
-            print(f"Would You Like To Use These Settings? [Y/N]")
-        else:
-            src = configs['source_dir']
-            dst = configs['destination_dir']
-            print("Running With Saved Settings...")
-    
+            if answer == "n":
+                src = get_src_dir()
+                dst = get_dest_dir()
+                configs['source_dir'] = src
+                configs['destination_dir'] = dst
+
+                # Save the configurations
+                with open("configs.json", "w") as file:
+                    json.dump(configs, file, indent=4)
+
+                break
+
+            elif answer == "y":
+                src = configs['source_dir']
+                dst = configs['destination_dir']
+
+                if not os.path.isdir(src):
+                    print("Saved source directory no longer exists.")
+                    src = get_src_dir()
+
+                if not os.path.isdir(src):
+                    print("Saved destination directory no longer exists.")
+                    dst = get_dest_dir()
+
+                with open("configs.json", "w") as file:
+                    json.dump(configs, file, indent=4)
+                
+                print("Running With Saved Settings...")
+
+                break
+
+            else:
+                print(f"ERROR: INVALID INPUT: {answer}")
+     
     event_handler = customEventHandler(src, dst)
     event_handler.clean_folder()
     observer = Observer()
-    observer.schedule(event_handler, src, recursive=True) # observer.schedule expects a instance of FileSystemEventHandler or a subclass
+    observer.schedule(event_handler, src, recursive=False) # observer.schedule expects a instance of FileSystemEventHandler or a subclass
     observer.start()
     try:
         while True:
