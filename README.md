@@ -1,78 +1,95 @@
-# File Organizer
+# FileDaemon
 
-This program cleans out a user-specified directory and organizes different file types into separate folders based on their file extensions.
+FileDaemon is a Python file organizer that cleans and monitors a user-selected directory.
 
-Files are organized into categories such as:
+Files are automatically sorted into folders based on their file extension:
 
-- Documents
-- Images
-- Audio
-- Videos
-- Miscellaneous
+* **Documents**
+* **Images**
+* **Audios**
+* **Videos**
+* **Miscellaneous**
 
-The program uses the Python `watchdog` module to monitor the selected directory for new files.
+FileDaemon uses Python's [`watchdog`](https://pypi.org/project/watchdog/) library to monitor the selected directory for newly created files and organize them automatically.
+
+## Features
+
+* Organizes existing files in a directory
+* Monitors the directory for newly created files
+* Automatically categorizes files by extension
+* Prevents duplicate filenames by renaming conflicting files
+* Supports custom source and destination directories
+* Saves previous directory settings for future runs
+* Supports Windows, macOS, and Linux
 
 ---
 
 ## Requirements
 
-Before running the program, make sure you have:
+You need:
 
-- Python 3
-- pip
-- watchdog
+* Python 3
+* Git
+
+All required Python packages are installed automatically from `requirements.txt`.
 
 ---
 
-# Windows Setup
+# macOS / Linux
 
-## 1. Download the Python File
-
-Download `folderCleaner.py` and place it inside a folder.
-
-## 2. Configure the Paths
-
-Open `folderCleaner.py` and fill in the directory paths at the top of the file.
-
-## 3. Install Python
-
-Download Python if it is not already installed.
-
-You can check whether Python is installed with:
+## 1. Clone the Repository
 
 ```bash
-python --version
+git clone <repository-url>
+cd FileDaemon
 ```
 
-## 4. Check pip
+## 2. Make the Launcher Executable
 
-pip is normally installed automatically with Python.
-
-Check whether pip is installed with:
+The first time you run FileDaemon, give the launcher execute permission:
 
 ```bash
-pip --version
+chmod +x run.sh
 ```
 
-## 5. Navigate to the Project Folder
-
-Open **Command Prompt** or **PowerShell** and navigate to the folder containing `folderCleaner.py`.
+## 3. Run FileDaemon
 
 ```bash
-cd path\to\your\folder
+./run.sh
 ```
 
-## 6. Create a Virtual Environment
+The launcher will automatically:
 
-```bash
+1. Create a Python virtual environment if one does not already exist
+2. Install the packages listed in `requirements.txt`
+3. Start FileDaemon
+
+You do not need to manually activate the virtual environment.
+
+---
+
+# Windows
+
+## 1. Clone the Repository
+
+Open Command Prompt or PowerShell:
+
+```powershell
+git clone <repository-url>
+cd FileDaemon
+```
+
+## 2. Create a Virtual Environment
+
+```powershell
 python -m venv venv
 ```
 
-## 7. Activate the Virtual Environment
+## 3. Activate the Virtual Environment
 
 ### Command Prompt
 
-```bash
+```cmd
 venv\Scripts\activate
 ```
 
@@ -82,150 +99,160 @@ venv\Scripts\activate
 venv\Scripts\Activate.ps1
 ```
 
-## 8. Install Watchdog
+## 4. Install Dependencies
 
-```bash
-pip install watchdog
+```powershell
+python -m pip install -r requirements.txt
 ```
 
-## 9. Run the Program
+## 5. Run FileDaemon
 
-```bash
+```powershell
 python folderCleaner.py
 ```
 
-To stop the program, press:
+---
+
+# First Run
+
+When FileDaemon is started for the first time, it will ask for two directories.
+
+```text
+Saved Settings Not Found.
+
+Enter your source directory:
+> ~/Downloads
+
+Enter your destination directory:
+> ~/Downloads
+```
+
+The **source directory** is the directory FileDaemon monitors and cleans.
+
+The **destination directory** is where FileDaemon creates its organization folders:
+
+```text
+Destination/
+├── Documents/
+├── Images/
+├── Audios/
+├── Videos/
+└── Miscellaneous/
+```
+
+After configuration, FileDaemon will clean existing files and begin monitoring the source directory for new files.
+
+---
+
+# Saved Settings
+
+FileDaemon remembers the source and destination directories from the previous run.
+
+The next time the program starts, it will display the saved settings:
+
+```text
+Saved Settings Found.
+
+Source Folder To Clean: /home/user/Downloads
+Destination Folder: /home/user/Downloads
+
+Would You Like To Use These Settings? [Y/N]
+```
+
+Enter:
+
+```text
+Y
+```
+
+to use the previous settings.
+
+Enter:
+
+```text
+N
+```
+
+to enter new source and destination directories.
+
+---
+
+# Stopping FileDaemon
+
+FileDaemon continues monitoring the source directory until it is stopped.
+
+Press:
 
 ```text
 Ctrl + C
 ```
 
----
-
-# macOS / Linux Setup
-
-## 1. Download the Python File
-
-Download `folderCleaner.py`.
-
-## 2. Create a Project Folder
-
-Create a folder for the Python file and move `folderCleaner.py` into it.
-
-## 3. Configure the Paths
-
-Open `folderCleaner.py` and fill in the directory paths at the top of the file.
-
-## 4. Check Python
-
-Make sure Python 3 is installed:
-
-```bash
-python3 --version
-```
-
-## 5. Check pip
-
-Check whether pip is installed:
-
-```bash
-python3 -m pip --version
-```
-
-## 6. Navigate to the Project Folder
-
-Check your current directory with:
-
-```bash
-pwd
-```
-
-Navigate to the folder containing `folderCleaner.py`:
-
-```bash
-cd /path/to/your/folder
-```
-
-## 7. Create a Virtual Environment
-
-```bash
-python3 -m venv venv
-```
-
-## 8. Activate the Virtual Environment
-
-```bash
-source venv/bin/activate
-```
-
-After activation, you should see `(venv)` at the beginning of your terminal prompt.
-
-## 9. Install Watchdog
-
-```bash
-pip install watchdog
-```
-
-## 10. Run the Program
-
-```bash
-python3 folderCleaner.py
-```
-
-To stop the program, press:
-
-```text
-Ctrl + C
-```
+to exit the program.
 
 ---
 
-# Running the Program Again
-
-After completing the initial setup, you do **not** need to recreate the virtual environment or reinstall `watchdog`.
-
-Navigate to your project folder:
-
-```bash
-cd /path/to/your/folder
-```
-
-Activate the virtual environment.
+# Running FileDaemon Again
 
 ### macOS / Linux
 
+Simply run:
+
 ```bash
-source venv/bin/activate
+./run.sh
 ```
+
+The existing virtual environment will automatically be reused.
 
 ### Windows
 
-```bash
+Activate the existing virtual environment:
+
+```powershell
 venv\Scripts\activate
 ```
 
-Then run the program.
+Then run:
 
-### macOS / Linux
-
-```bash
-python3 folderCleaner.py
-```
-
-### Windows
-
-```bash
+```powershell
 python folderCleaner.py
 ```
 
 ---
 
-# Stopping the Program
-
-The program continuously monitors the selected directory while it is running.
-
-To stop the program:
+# Project Structure
 
 ```text
-Ctrl + C
+FileDaemon/
+├── folderCleaner.py
+├── requirements.txt
+├── run.sh
+├── configs.json
+├── README.md
+└── .gitignore
 ```
+
+`venv/` is created locally when the program is set up and should not be committed to Git.
+
+---
+
+# Dependencies
+
+Python dependencies are stored in `requirements.txt`.
+
+Currently:
+
+```text
+watchdog==6.0.0
+```
+
+To install them manually:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+---
+
+# License
+
+This project is intended for educational and personal use.
