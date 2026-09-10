@@ -4,45 +4,65 @@ import time
 import logging
 from watchdog.observers import Observer 
 from watchdog.events import FileSystemEventHandler
-
-home = os.path.expanduser("~")
-desktop = os.path.join(home, "Desktop")
-
-user_dir_path = ""
-dest_path_documents = os.path.join(desktop, "Documents")
-dest_path_images = os.path.join(desktop, "Images")
-dest_path_sounds = os.path.join(desktop, "MP3s")
-dest_path_videos = os.path.join(desktop, "MP4s")
-dest_path_miscellaneous = os.path.join(desktop, "Miscellaneous")
-
-DOWNLOAD_TIME = 12 # temporary fix to handeling incomplete downloads
+import json
 
 # document file supported extensions
 document_extensions = [".doc", ".docx", ".odt", ".rtf", ".txt", ".xls", ".xlsx", ".ods", ".csv", ".ppt", ".pptx", ".odp", ".pdf", ".epub", ".md", ".tex", ".pages"]
 
 # image file supported extensions 
-image_extensions = [".jpeg", ".jpg", ".jfif", "pjpeg", ".pjp", ".gif", ".png", ".svg", ".bmp", ".tiff", ".tif", ".webp", ".ico"]
+image_extensions = [".jpeg", ".jpg", ".jfif", ".pjpeg", ".pjp", ".gif", ".png", ".svg", ".bmp", ".tiff", ".tif", ".webp", ".ico"]
 
 # sound file supported extensions
-sound_extensions = [".mp3", ".acc", ".ogg", ".wma", ".m4a", ".wav", ".aiff", ".flac"]
+sound_extensions = [".mp3", ".aac", ".ogg", ".wma", ".m4a", ".wav", ".aiff", ".flac"]
 
 # video file supported extensions
 video_extensions = [".mp4", ".mkv", ".mov", ".avi", ".wmv", ".flv", ".webm", ".mpeg", ".3gp", ".m4v"]
 
-# miscellaneous files if no other supported extensions matches
-
-# make the directories if they do not exist on the machine already 
-os.makedirs(dest_path_documents, exist_ok=True)
-os.makedirs(dest_path_images, exist_ok=True)
-os.makedirs(dest_path_sounds, exist_ok=True)
-os.makedirs(dest_path_videos, exist_ok=True)
-os.makedirs(dest_path_miscellaneous, exist_ok=True)
-
 class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEventHandler 
+    def __init__(self, src_dir, dst_dir):
+        self.user_source_directories = src_dir
+        
+        self.destinations = {
+            "Documents" : os.path.join(dst_dir, "Documents"),
+            "Images" : os.path.join(dst_dir, "Images"),
+            "Audios" : os.path.join(dst_dir, "Audios"),
+            "Videos" : os.path.join(dst_dir, "Videos"),
+            "Miscellaneous" : os.path.join(dst_dir, "Miscellaneous")
+        }
 
+        self.FILE_TYPES = {
+            "documents": {
+                ".doc", ".docx", ".odt", ".rtf", ".txt",
+                ".xls", ".xlsx", ".ods", ".csv",
+                ".ppt", ".pptx", ".odp", ".pdf",
+                ".epub", ".md", ".tex", ".pages"
+            },
+
+            "images": {
+                ".jpeg", ".jpg", ".jfif", ".pjpeg", ".pjp",
+                ".gif", ".png", ".svg", ".bmp",
+                ".tiff", ".tif", ".webp", ".ico"
+            },
+
+            "sounds": {
+                ".mp3", ".aac", ".ogg", ".wma",
+                ".m4a", ".wav", ".aiff", ".flac"
+            },
+
+            "videos": {
+                ".mp4", ".mkv", ".mov", ".avi",
+                ".wmv", ".flv", ".webm", ".mpeg",
+                ".3gp", ".m4v"
+            }
+        }
+
+        # make the directories if they do not exist on the machine already 
+        for dst in self.destinations.values():
+            os.makedirs(dst, exist_ok=True)
+        
     def clean_folder(self): 
         self.print_start()
-        with os.scandir(user_dir_path) as folder:
+        with os.scandir(self.user_source_directories) as folder:
             for file in folder:
                 if file.is_file():
                     # check the file types
@@ -53,7 +73,7 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
         if event.src_path.endswith(".crdownload") or os.path.basename(event.src_path).startswith(".com.google.Chrome."): # incomplete chrome downloads skip
             return
         
-        with os.scandir(user_dir_path) as folder:
+        with os.scandir(self.user_source_directories) as folder:
             for file in folder:
                 if file.is_file():
                     # check the file types
@@ -63,16 +83,16 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
     def check_type_and_sort(self, file_name): 
         _, ext = os.path.splitext(file_name)
 
-        if ext in document_extensions:
-            self.move_file(file_name, dest_path_documents)
-        elif ext in image_extensions:
-            self.move_file(file_name, dest_path_images)
-        elif ext in sound_extensions:
-            self.move_file(file_name, dest_path_sounds)
-        elif ext in video_extensions:
-            self.move_file(file_name, dest_path_videos)
+        if ext in self.FILE_TYPES["documents"]:
+            self.move_file(file_name, self.destinations["Documents"])
+        elif ext in self.FILE_TYPES["images"]:
+            self.move_file(file_name, self.destinations["Images"])
+        elif ext in self.FILE_TYPES["audios"]:
+            self.move_file(file_name, self.destinations["Audios"])
+        elif ext in self.FILE_TYPES["videos"]:
+            self.move_file(file_name, self.destinations["Videos"])
         else:
-            self.move_file(file_name, dest_path_miscellaneous)
+            self.move_file(file_name, self.destinations["Miscellaneous"])
 
     # if a file exists in the dest dir then make the new file unique 
     def make_unique(self, file_name, dest_folder):
@@ -81,15 +101,14 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
         count = 1
 
         while(os.path.exists(os.path.join(dest_folder, unique_name))):
-            unique_name = f"{name}{(count)}{extension}" # modify the file name so that it had a unique number until the file name is unique
+            unique_name = f"{name} ({count}){extension}" # modify the file name so that it had a unique number until the file name is unique
             count += 1
 
         return unique_name    
    
-
     def move_file(self, file_name, dest_folder):
         fName = self.make_unique(file_name, dest_folder)
-        source_path = os.path.join(user_dir_path, file_name)
+        source_path = os.path.join(self.user_source_directories, file_name)
         dest_path = os.path.join(dest_folder, fName)
 
         shutil.move(source_path, dest_path)
@@ -107,6 +126,29 @@ class customEventHandler(FileSystemEventHandler): # subclass of the FileSystemEv
         print("=" * 120)
         print("Cleanup finished")
 
+def get_src_dir():
+    while True:
+        src = input("Enter your source directory: ").strip()
+
+        abs_path = os.path.abspath(os.path.expanduser(src))
+
+        if os.path.isdir(abs_path):
+            return abs_path
+        
+        print("The path provided is not a valid path.")
+
+def get_dest_dir():
+    while True:
+        dest = input("Enter your destionation directory: ").strip()
+
+        abs_path = os.path.abspath(os.path.expanduser(dest))
+
+        try:
+            os.makedirs(abs_path, exist_ok=True)
+            return abs_path
+        except OSError:
+            print("The path provided is not a valid path.")
+        
 # Watchdog quickstart code from 
 # https://pythonhosted.org/watchdog/quickstart.html
 
@@ -116,12 +158,41 @@ if __name__ == "__main__": # ensures that the script will only exectue when dire
                         format='%(asctime)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     
+    src = ""
+    dst = ""
 
-    user_dir_path= input("Enter a folder you would like to be cleaned: ")
-    event_handler = customEventHandler()
+    with open("configs.json", "r") as file:
+        configs = json.load(file)
+
+    if not configs:
+        print("Saved Settings Not Found.")
+    else:
+        print("Saved Settings Found.")
+        print(f"Source Folder To Clean: {configs['source_dir']}")
+        print(f"Destination Folder: {configs['destination_dir']}")
+        print(f"Would You Like To Use These Settings? [Y/N]")
+
+        answer = input().lower
+        newSettings = []
+
+        if answer == "y":
+            newSettings = set_settings()
+            src = get_src_dir()
+            dst = get_dest_dir()
+            configs['source_dir'] = get_src_dir()
+            configs['destination_dir'] = get_dest_dir()
+        elif answer != "n":
+            print(f"ERROR: INVALID INPUT: {answer}")
+            print(f"Would You Like To Use These Settings? [Y/N]")
+        else:
+            src = configs['source_dir']
+            dst = configs['destination_dir']
+            print("Running With Saved Settings...")
+    
+    event_handler = customEventHandler(src, dst)
     event_handler.clean_folder()
     observer = Observer()
-    observer.schedule(event_handler, user_dir_path, recursive=True) # observer.schedule expects a instance of FileSystemEventHandler or a subclass
+    observer.schedule(event_handler, src, recursive=True) # observer.schedule expects a instance of FileSystemEventHandler or a subclass
     observer.start()
     try:
         while True:
